@@ -146,6 +146,8 @@ abstract class AbstractSource implements MetadataInterface
                 throw new \Exception('Table "' . $tableName . '" is of an unsupported type "' . $data['table_type'] . '"');
         }
         $table->setColumns($this->getColumns($tableName, $schema));
+        $table->setConstraints($this->getConstraints($tableName, $schema));
+        $table->setIndexes($this->getIndexes($tableName,$schema));
         return $table;
     }
 
@@ -284,7 +286,7 @@ abstract class AbstractSource implements MetadataInterface
             'ordinal_position', 'column_default', 'is_nullable',
             'data_type', 'character_maximum_length', 'character_octet_length',
             'numeric_precision', 'numeric_scale', 'numeric_unsigned',
-            'erratas'
+            'erratas', 'comment'
         );
         foreach ($props as $prop) {
             if (isset($info[$prop])) {
@@ -306,6 +308,64 @@ abstract class AbstractSource implements MetadataInterface
         return $column;
     }
 
+    /**
+     * Returns the Indexes of a Table
+     *
+     * @param string $table
+     * @param string $schema
+     * @return array
+     */
+    public function getIndexes($table, $schema = null)
+    {
+        if ($schema === null) {
+            $schema = $this->defaultSchema;
+        }
+
+        $this->loadIndexData($table, $schema);
+
+        $indexes = array();
+        foreach (array_keys($this->data['indexes'][$schema][$table]) as $constraintName) {
+            $indexes[] = $this->getIndex($constraintName, $table, $schema);
+        }
+
+        return $indexes;
+    }
+
+    /**
+     * @param string $indexName
+     * @param string $table
+     * @param sting $schema
+     * @return \Zend\Db\Metadata\Object\IndexObject
+     * @throws \Exception
+     */
+    public function getIndex($indexName, $table, $schema = null)
+    {
+        if ($schema === null) {
+            $schema = $this->defaultSchema;
+        }
+
+        $this->loadConstraintData($table, $schema);
+
+        if (!isset($this->data['indexes'][$schema][$table][$indexName])) {
+            throw new \Exception('Cannot find a Index by that name in this table');
+        }
+
+        $info = $this->data['indexes'][$schema][$table][$indexName];
+        $index = new Object\IndexObject($indexName, $table, $schema);
+
+        foreach (array(
+                     'index_type'         => 'setType',
+                     'unique'            => 'setUnique',
+                     'columns'            => 'setColumns',
+                     'comment'            => 'setComment',
+                 ) as $key => $setMethod) {
+            if (isset($info[$key])) {
+                $index->{$setMethod}($info[$key]);
+            }
+        }
+
+        return $index;
+    }
     /**
      * Get constraints
      *
@@ -541,6 +601,15 @@ abstract class AbstractSource implements MetadataInterface
         }
 
         $this->prepareDataHierarchy('constraints', $schema);
+    }
+
+    protected function loadIndexData($table, $schema)
+    {
+        if (isset($this->data['indexes'][$schema])) {
+            return;
+        }
+
+        $this->prepareDataHierarchy('indexes', $schema);
     }
 
     protected function loadTriggerData($schema)
