@@ -58,6 +58,8 @@ class MysqlMetadata extends AbstractSource
             array('V','VIEW_DEFINITION'),
             array('V','CHECK_OPTION'),
             array('V','IS_UPDATABLE'),
+            array('T','TABLE_COMMENT'),
+            array('T','ENGINE'),
         );
 
         array_walk($isColumns, function (&$c) use ($p) { $c = $p->quoteIdentifierChain($c); });
@@ -91,6 +93,8 @@ class MysqlMetadata extends AbstractSource
                 'view_definition' => $row['VIEW_DEFINITION'],
                 'check_option' => $row['CHECK_OPTION'],
                 'is_updatable' => ('YES' == $row['IS_UPDATABLE']),
+                'comment' => $row['TABLE_COMMENT'],
+                'engine'  => $row['ENGINE'],
             );
         }
 
@@ -116,6 +120,7 @@ class MysqlMetadata extends AbstractSource
             array('C','NUMERIC_SCALE'),
             array('C','COLUMN_NAME'),
             array('C','COLUMN_TYPE'),
+            array('C','COLUMN_COMMENT'),
         );
 
         array_walk($isColumns, function (&$c) use ($p) { $c = $p->quoteIdentifierChain($c); });
@@ -165,6 +170,7 @@ class MysqlMetadata extends AbstractSource
                 'numeric_scale'             => $row['NUMERIC_SCALE'],
                 'numeric_unsigned'          => (false !== strpos($row['COLUMN_TYPE'], 'unsigned')),
                 'erratas'                   => $erratas,
+                'comment'                  => $row['COLUMN_COMMENT'],
             );
         }
 
@@ -278,6 +284,57 @@ class MysqlMetadata extends AbstractSource
         }
 
         $this->data['constraints'][$schema][$table] = $constraints;
+    }
+
+
+    protected function loadIndexData($table, $schema)
+    {
+        if (isset($this->data['indexes'][$schema][$table])) {
+            return;
+        }
+
+        $this->prepareDataHierarchy('indexes', $schema, $table);
+
+        $isColumns = array(
+            array('S','TABLE_NAME'),
+            array('S','INDEX_NAME'),
+            array('S','INDEX_TYPE'),
+            array('S','COMMENT'),
+            array('S', 'NULLABLE'),
+            array('S', 'NON_UNIQUE'),
+        );
+
+        $p = $this->adapter->getPlatform();
+
+        array_walk($isColumns, function (&$c) use ($p) {
+            $c = $p->quoteIdentifierChain($c);
+        });
+
+        $sql = 'SELECT ' . implode(', ', $isColumns)
+            . ' ,GROUP_CONCAT( '.$p->quoteIdentifierChain(array('S','COLUMN_NAME'))
+            .' ORDER BY '.$p->quoteIdentifierChain(array('S','SEQ_IN_INDEX')).' ) AS `COLUMNS`'
+            . ' FROM ' . $p->quoteIdentifierChain(array('INFORMATION_SCHEMA','STATISTICS')) . ' as S'
+
+            . ' WHERE ' . $p->quoteIdentifierChain(array('S','TABLE_NAME'))
+            . ' = ' . $p->quoteValue($table)
+            . ' AND ' . $p->quoteIdentifierChain(array('S','TABLE_SCHEMA'))
+            . ' = ' . $p->quoteValue($schema)
+            . ' GROUP BY 1,2';
+
+        $results = $this->adapter->query($sql, Adapter::QUERY_MODE_EXECUTE);
+
+        $indexes = array();
+        foreach ($results->toArray() as $row) {
+
+            $indexes[$row['INDEX_NAME']] = array(
+                'index_name' => $row['INDEX_NAME'],
+                'index_type' => $row['INDEX_TYPE'],
+                'table_name' => $row['TABLE_NAME'],
+                'unique' => !$row['NON_UNIQUE'],
+                'columns'    => explode(',',$row['COLUMNS']),
+            );
+        }
+        $this->data['indexes'][$schema][$table] = $indexes;
     }
 
     protected function loadConstraintDataNames($schema)
