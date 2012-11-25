@@ -17,9 +17,25 @@ namespace Zend\Db\Metadata\Object;
  */
 class ViewObject extends AbstractTableObject
 {
+    /**
+     * @var string
+     */
     protected $viewDefinition;
+
+    /**
+     * @var string
+     */
     protected $checkOption;
+
+    /**
+     * @var bool
+     */
     protected $isUpdatable;
+
+    /**
+     * @var string
+     */
+    protected $comment = '';
 
     /**
      * @return string $viewDefinition
@@ -78,5 +94,22 @@ class ViewObject extends AbstractTableObject
     public function isUpdatable()
     {
         return $this->isUpdatable;
+    }
+
+    /**
+     * Sets the Comment
+     * @param $com
+     */
+    public function setComment($com)
+    {
+        $this->comment = $com;
+    }
+    /**
+     * Returns the comment
+     * @return string
+     */
+    public function getComment()
+    {
+        return $this->comment;
     }
 }

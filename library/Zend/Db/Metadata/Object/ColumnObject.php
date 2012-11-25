@@ -97,6 +97,11 @@ class ColumnObject
     protected $errata = array();
 
     /**
+     * @var string
+     */
+    protected $comment = '';
+
+    /**
      * Constructor
      *
      * @param string $name
@@ -391,6 +396,23 @@ class ColumnObject
     {
         $this->errata[$errataName] = $errataValue;
         return $this;
+    }
+
+    /**
+     * Sets the Comment
+     * @param $com
+     */
+    public function setComment($com)
+    {
+        $this->comment = $com;
+    }
+    /**
+     * Returns the comment
+     * @return string
+     */
+    public function getComment()
+    {
+        return $this->comment;
     }
 
 }
