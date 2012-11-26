@@ -253,4 +253,29 @@ class Metadata implements MetadataInterface
         return $this->source->getColumn($columnName, $table, $schema);
     }
 
+    /**
+     * Get Index
+     *
+     * @param string $indexName
+     * @param string $table
+     * @param string $schema
+     * @return mixed
+     */
+    public function getIndex($indexName,$table,$schema=null)
+    {
+        return $this->source->getIndex($indexName,$table,$schema);
+    }
+
+    /**
+     * Returns the Indexes of a Table
+     *
+     * @param string $table
+     * @param string $schema
+     * @return array
+     */
+    public function getIndexes($table, $schema = null)
+    {
+        return $this->source->getIndexes($table,$schema);
+    }
+
 }

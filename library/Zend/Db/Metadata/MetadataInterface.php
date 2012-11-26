@@ -39,4 +39,7 @@ interface MetadataInterface
     public function getTriggers($schema = null);
     public function getTrigger($triggerName, $schema = null);
 
+    public function getIndex($indexName,$table,$schema=null);
+    public function getIndexes($table, $schema = null);
+
 }
